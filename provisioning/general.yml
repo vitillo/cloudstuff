@@ -25,5 +25,6 @@
 
     - name: Ensure dotiles are linked
       command: make chdir=/home/vagrant/dotfiles
+      ignore_errors: yes
       sudo: yes
       sudo_user: vagrant
