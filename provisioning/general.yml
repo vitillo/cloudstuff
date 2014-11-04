@@ -1,0 +1,29 @@
+- name: This playbook sets up a general dev environment
+  hosts: all
+  tasks:
+    - name: Ensure packages are installed
+      apt: name={{item}} state=installed update_cache=yes
+      with_items:
+        - vim
+        - emacs24
+        - ansible
+        - zsh
+        - git
+        - wget
+        - language-pack-en
+
+    - name: Ensure that vagrant user can change shell passwordless
+      template: src=templates/etc/chsh dest=/etc/pam.d/chsh
+
+    - name: Install dotfiles
+      git: repo=git://www.github.com/vitillo/dotfiles
+           dest=/home/vagrant/dotfiles
+           recursive=yes
+           accept_hostkey=true
+      sudo: yes
+      sudo_user: vagrant
+
+    - name: Ensure dotiles are linked
+      command: make chdir=/home/vagrant/dotfiles
+      sudo: yes
+      sudo_user: vagrant

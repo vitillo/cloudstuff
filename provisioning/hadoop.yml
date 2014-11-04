@@ -1,0 +1,61 @@
+- name: This playbok sets up HDFS
+  hosts: default
+  vars:
+    hadoop_version: 2.5.1
+    env:
+      JAVA_HOME: /usr/lib/jvm/default-java
+      HADOOP_PREFIX: /usr/local/hadoop
+      PATH: /usr/local/hadoop/bin:/usr/local/hadoop/sbin:{{ansible_env.PATH}}
+
+  tasks:
+    - name: Ensure JAVA_HOME environment variable is set
+      lineinfile: dest=~/.bashrc line="export JAVA_HOME=/usr/lib/jvm/default-java"
+      sudo: yes
+      sudo_user: vagrant
+
+    - name: Ensure HADOOP_PREFIX environment variable is set
+      lineinfile: dest=~/.bashrc line="export HADOOP_PREFIX=/usr/local/hadoop"
+      sudo: yes
+      sudo_user: vagrant
+
+    - name: Ensure HADOOP_PREFIX/bin environment variable is prepended to PATH
+      lineinfile: dest=~/.bashrc line="export PATH=/usr/local/hadoop/bin:$PATH"
+      sudo: yes
+      sudo_user: vagrant
+      environment: env
+
+    - name: Ensure Java is installed
+      apt: name={{item}} state=installed update_cache=yes
+      with_items:
+        - default-jre-headless
+        - default-jdk
+
+    - name: Download Hadoop distribution
+      get_url: url=http://archive.apache.org/dist/hadoop/core/hadoop-{{hadoop_version}}/hadoop-{{hadoop_version}}.tar.gz
+               dest=/home/vagrant/hadoop.tar.gz
+               force=no
+      sudo: yes
+      sudo_user: vagrant
+
+    - name: Unarchive Hadoop sources
+      unarchive: src=/home/vagrant/hadoop.tar.gz dest=/usr/local copy=no creates=/usr/local/hadoop-{{hadoop_version}}
+
+    - name: Rename Hadoop directory
+      command: mv /usr/local/hadoop-{{hadoop_version}} /usr/local/hadoop creates=/usr/local/hadoop
+
+    - name: Configure Hadoop
+      template: src=templates/hadoop/{{item}} dest=/usr/local/hadoop/etc/hadoop/
+      with_items:
+        - hdfs-site.xml
+        - core-site.xml
+        - hadoop-env.sh
+
+    - name: Format HDFS filesystem
+      command: hdfs namenode -format
+      environment: env
+
+    - name: Start DFS
+      command: start-dfs.sh
+      environment: env
+      sudo: yes
+      sudo_user: vagrant
